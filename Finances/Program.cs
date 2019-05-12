@@ -13,8 +13,10 @@ namespace Finances
     {
         static void Main(string[] args)
         {
-            List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_23-36-40_card_comun.xls");
+            //List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_23-36-40_card_comun.xls");
             //List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_20-03-53.xls");
+            List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_16-32-26.xls");
+            
 
             List<Transaction> categorizedTransactions = categorizeTransactions(transactions);
 

@@ -194,7 +194,15 @@ namespace Finances
                     else if (item.To.Contains("CARREFOUR")) { item.SpendingType = SpentOn.Food; }
                     else if (item.To.Contains("LIDL")) { item.SpendingType = SpentOn.Food; }
                     else if (item.To.Contains("PROFI")) { item.SpendingType = SpentOn.Food; }
+                    else if (item.To.Contains("CHOPSTIX")) { item.SpendingType = SpentOn.Food; }
+                    else if (item.To.Contains("TIMAS")) { item.SpendingType = SpentOn.Car; }
                     else if (item.To.Contains("MEGA")) { item.SpendingType = SpentOn.Food; }
+                    else if (item.To.Contains("AUCHAN")) { item.SpendingType = SpentOn.Food; }
+                    else if (item.To.Contains("PREMIER")) { item.SpendingType = SpentOn.Food; }
+                    else if (item.To.Contains("EAT ETC")) { item.SpendingType = SpentOn.Work; }
+                    else if (item.To.Contains("ERIC STEFAN")) { item.SpendingType = SpentOn.Work; }
+                    else if (item.To.Contains("INMEDIO")) { item.SpendingType = SpentOn.Work; }
+                    else if (item.To.Contains("LUCA")) { item.SpendingType = SpentOn.Work; }
                     else if (item.To.Contains("OMV")) { item.SpendingType = SpentOn.Car; }
                     else if (item.To.Contains("AUTOKARMA")) { item.SpendingType = SpentOn.Car; }
                     else if (item.To.Contains("LAGARDERE")) { item.SpendingType = SpentOn.Work; }
@@ -211,8 +219,10 @@ namespace Finances
         private static string GenerateReport(List<List<Transaction>> byWeek)
         {
             string report = "";
+            string moreOrLess = "";
+            string incOrDec = "";
 
-            List<Transaction> lastWeek = new List<Transaction>();
+            List <Transaction> lastWeek = new List<Transaction>();
             List<List<Transaction>> last4Weeks = new List<List<Transaction>>();
 
             foreach (var week in byWeek)
@@ -220,55 +230,123 @@ namespace Finances
                 report += ($"Week {week.First().CalendarWeek}{Environment.NewLine}");
                 report += Environment.NewLine;
 
-                report += ($"Total spent: {week.Sum(o => o.Debit)}{Environment.NewLine}");
-                report += ($"Average per day spent: {(week.Sum(o => o.Debit) / 7)}{Environment.NewLine}");
+                report += ($"Total spent: {week.Sum(o => o.Debit)} RON. ");
 
                 if (lastWeek.Count != 0)
                 {
                     double dThisWeek = (double)week.Sum(o => o.Debit);
                     double dLastWeek = (double)lastWeek.Sum(o => o.Debit);
-                    double diff = dThisWeek - dLastWeek;
+                    double dDiff = dThisWeek - dLastWeek;
+                    double dPercent = (double)(dDiff / dLastWeek * 100);
+                    string sPercent = dPercent.ToString().Substring(0, dPercent.ToString().IndexOf(".") + 2);
 
-                    string moreOrLess = "";
-
-                    if (diff < 0)
+                    if (dDiff < 0)
                     {
                         moreOrLess = "less";
+                        incOrDec = "decrease";
                     }
                     else
                     {
                         moreOrLess = "more";
+                        incOrDec = "increase";
                     }
 
-                    report += ($"{(diff/dLastWeek * 100).ToString().Substring(0, 6)}% {moreOrLess} than last week.{Environment.NewLine}");
+                    report += ($"{sPercent}% {moreOrLess} than last week.{Environment.NewLine}");
                 }
 
+                string averagePerDay = (week.Sum(o => o.Debit) / 7).ToString();
+                averagePerDay = averagePerDay.Substring(0, averagePerDay.IndexOf(".") + 2);
+
+                report += ($"Average per day spent: {averagePerDay} RON.{Environment.NewLine}");
+                
                 //report += ($"{(week.Sum(o => o.Debit) - week.Average(o => o.Debit))/week.Average(o => o.Debit) * 100}% more than average.{Environment.NewLine}");
 
                 report += Environment.NewLine;
 
                 foreach (var trans in Enum.GetValues(typeof(TransactionType)))
                 {
-                    report += Enum.GetName(typeof(TransactionType), trans) + ": " + week.Where(o => o.TypeOfTransaction == (TransactionType)trans).Sum(o => o.Debit) + Environment.NewLine;
+                    report += Enum.GetName(typeof(TransactionType), trans) + ": " + week.Where(o => o.TypeOfTransaction == (TransactionType)trans).Sum(o => o.Debit) + " RON ";
+                    if (lastWeek.Count != 0)
+                    {
+                        double dThisWeek = (double)week.Where(o => o.TypeOfTransaction == (TransactionType)trans).Sum(o => o.Debit);
+                        double dLastWeek = (double)lastWeek.Where(o => o.TypeOfTransaction == (TransactionType)trans).Sum(o => o.Debit);
+                        double dDiff = dThisWeek - dLastWeek;
+
+                        if (dDiff != 0)
+                        {
+                            if (dDiff > 0)
+                            {
+                                incOrDec = "increase";
+                            }
+                            else
+                            {
+                                incOrDec = "decrease";
+                            }
+                            double dPercent = (double)(dDiff / dLastWeek * 100);
+                            string sPercent = dPercent.ToString().Substring(0, dPercent.ToString().IndexOf(".") + 2);
+                            report += ($"{sPercent}% {incOrDec}.");
+                        }
+                    }
+                    report += Environment.NewLine;
                 }
 
                 report += Environment.NewLine;
 
                 foreach (var trans in Enum.GetValues(typeof(SpentOn)))
                 {
-                    report += Enum.GetName(typeof(SpentOn), trans) + ": " + week.Where(o => o.SpendingType == (SpentOn)trans).Sum(o => o.Debit) + Environment.NewLine;
+                    report += Enum.GetName(typeof(SpentOn), trans) + ": " + week.Where(o => o.SpendingType == (SpentOn)trans).Sum(o => o.Debit) + " RON ";
+                    if (lastWeek.Count != 0)
+                    {
+                        double dThisWeek = (double)week.Where(o => o.SpendingType == (SpentOn)trans).Sum(o => o.Debit);
+                        double dLastWeek = (double)lastWeek.Where(o => o.SpendingType == (SpentOn)trans).Sum(o => o.Debit);
+                        double dDiff = dThisWeek - dLastWeek;
+
+                        if (dDiff != 0)
+                        {
+                            if (dDiff > 0)
+                            {
+                                incOrDec = "increase";
+                            }
+                            else
+                            {
+                                incOrDec = "decrease";
+                            }
+                            double dPercent = (double)(dDiff / dLastWeek * 100);
+                            string sPercent = dPercent.ToString().Substring(0, dPercent.ToString().IndexOf(".") + 2);
+                            report += ($"{sPercent}% {incOrDec}.");
+                        }
+                    }
+                    report += Environment.NewLine;
                 }
 
                 report += Environment.NewLine;
 
-                //report += ("MEGA " + findSpendingsByContainingString(week, "MEGA") + Environment.NewLine);
-                //report += ("CORA " + findSpendingsByContainingString(week, "CORA") + Environment.NewLine);
-                //report += ("OMV " + findSpendingsByContainingString(week, "OMV") + Environment.NewLine);
-
                 report += "Most spent on: " + Environment.NewLine;
                 foreach (var ordonator in findSpendingsByUniqueDestination(week))
                 {
-                    report += ($"Total spendings at {ordonator.To}: {ordonator.Debit}{Environment.NewLine}");
+                    if (lastWeek.Count != 0)
+                    {
+                        double dThisWeek = (double)ordonator.Debit;
+                        double dLastWeek = (double)findSpendingsByUniqueDestination(lastWeek).Where(o => o.To == ordonator.To).Sum(o => o.Debit); 
+                        double dDiff = dThisWeek - dLastWeek;
+
+                        if (dDiff != 0)
+                        {
+                            if (dDiff > 0)
+                            {
+                                incOrDec = "increase";
+                            }
+                            else
+                            {
+                                incOrDec = "decrease";
+                            }
+                            double dPercent = (double)(dDiff / dLastWeek * 100);
+                            string sPercent = dPercent.ToString().Substring(0, dPercent.ToString().IndexOf(".") + 2);
+                            report += ($"{sPercent}% {incOrDec}.");
+                        }
+                    }
+                    report += ($" Total spendings at {ordonator.To}: {ordonator.Debit} RON ");
+                    report += Environment.NewLine;
                 }
 
                 report += Environment.NewLine;
