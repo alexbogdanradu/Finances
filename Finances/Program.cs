@@ -13,19 +13,23 @@ namespace Finances
     {
         static void Main(string[] args)
         {
-            //List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_23-36-40_card_comun.xls");
-            //List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_20-03-53.xls");
-            List<Transaction> transactions = getTransactionsFromFile(@"Tranzactii_11-05-2019_16-32-26.xls");
-            
+            try
+            {
+                List<Transaction> transactions = getTransactionsFromFile(@"CardComun_24-07-2019_10-00-28.xls");
 
-            List<Transaction> categorizedTransactions = categorizeTransactions(transactions);
+                List<Transaction> categorizedTransactions = categorizeTransactions(transactions);
 
-            List<List<Transaction>> transactionsByWeek = findWeeklyTransactions(categorizedTransactions);
+                List<List<Transaction>> transactionsByWeek = findWeeklyTransactions(categorizedTransactions);
 
-            Console.WriteLine(GenerateReport(transactionsByWeek));
+                Console.WriteLine(GenerateReport(transactionsByWeek));
 
-            Console.Read();
+                Console.Read();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                Console.Read();
+            }
         }
-
     }
 }
