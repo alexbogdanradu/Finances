@@ -13,6 +13,12 @@ namespace Finances
 {
     partial class Program
     {
+        public enum ReportType
+        {
+            Weekly,
+            Monthly
+        }
+
         //private static void GetEmail()
         //{
         //    using (var emailClient = new Pop3Client())
@@ -207,6 +213,25 @@ namespace Finances
 
         private static List<Transaction> categorizeTransactions(List<Transaction> transactions)
         {
+            List<Transaction> temp = new List<Transaction>();
+            //Discard all incoming transactions
+            temp.AddRange(transactions.Where(o => o.To != null));
+            transactions.Clear();
+            transactions.AddRange(temp);
+
+            //Discard all "In contul"
+            temp.Clear();
+            temp.AddRange(transactions.Where(o => !o.To.Contains("In contul:")));
+            transactions.Clear();
+            transactions.AddRange(temp);
+
+            //Discard all "Beneficiar"
+            temp.Clear();
+            temp.AddRange(transactions.Where(o => !o.To.Contains("Beneficiar:")));
+            transactions.Clear();
+            transactions.AddRange(temp);
+
+            //Categorize transaction based on type
             foreach (var item in transactions)
             {
                 switch (item.Type)
@@ -225,6 +250,7 @@ namespace Finances
                 }
             }
 
+            //Categorize based on food, work, car, etc.
             foreach (var item in transactions)
             {
                 if (item.To != null)
@@ -253,40 +279,93 @@ namespace Finances
                 }
             }
 
+            //Discard header from To field
+            foreach (var item in transactions)
+            {
+                string keyword = "Terminal: ";
+                if (item.To.Contains(keyword))
+                {
+                    item.To = item.To.Substring(item.To.IndexOf(keyword) + keyword.Length);
+                }
+
+                keyword = "Beneficiar: ";
+                if (item.To.Contains(keyword))
+                {
+                    item.To = item.To.Substring(item.To.IndexOf(keyword) + keyword.Length);
+                }
+
+                keyword = "In contul: ";
+                if (item.To.Contains(keyword))
+                {
+                    item.To = item.To.Substring(item.To.IndexOf(keyword) + keyword.Length);
+                }
+            }
+
             return transactions;
         }
 
-        private static string GenerateReport(List<List<Transaction>> byWeek)
+        private static List<List<Transaction>> findMonthlyTransactions(List<Transaction> categorizedTransactions)
+        {
+            List<List<Transaction>> monthly = new List<List<Transaction>>();
+
+            IEnumerable<int> months = categorizedTransactions.Select(o => o.Date.Month).Distinct();
+            IEnumerable<int> years = categorizedTransactions.Select(o => o.Date.Year).Distinct();
+
+            foreach (var year in years)
+            {
+                foreach (var month in months)
+                {
+                    monthly.Add(new List<Transaction>());
+                    monthly.Last().AddRange(categorizedTransactions.Where(o => o.Date.Year == year && o.Date.Month == month));
+                }
+            }
+
+            monthly.Reverse();
+            return monthly;
+        }
+
+        private static string GenerateReport(List<List<Transaction>> segmented, ReportType reportType)
         {
             string report = "";
             string moreOrLess = "";
             string incOrDec = "";
 
             List<Transaction> lastWeek = new List<Transaction>();
-            List<List<Transaction>> last4Weeks = new List<List<Transaction>>();
+            //List<List<Transaction>> last4Weeks = new List<List<Transaction>>();
 
             double? totalSpent = 0;
 
-            for (int i = 0; i < byWeek.Count; i++)
+            for (int i = 0; i < segmented.Count; i++)
             {
-                totalSpent += byWeek[i].Sum(o => o.Debit);
+                totalSpent += segmented[i].Sum(o => o.Debit);
             }
 
-            double averagePerWeek = (double)totalSpent/byWeek.Count;
+            double averagePerSegment = (double)totalSpent / segmented.Count;
 
-            foreach (var week in byWeek)
+            foreach (var segment in segmented)
             {
                 //Total spent
-                report += ($"Week {week.First().CalendarWeek}{Environment.NewLine}");
-                report += ($"Total spent: {week.Sum(o => o.Debit)} RON. ");
+                switch (reportType)
+                {
+                    case ReportType.Weekly:
+                        report += ($"Week {segment.First().CalendarWeek}{Environment.NewLine}");
+                        break;
+                    case ReportType.Monthly:
+                        report += ($"Month {segment.First().Date.Month}{Environment.NewLine}");
+                        break;
+                    default:
+                        break;
+                }
+
+                report += ($"Total spent: {segment.Sum(o => o.Debit)} RON. ");
 
                 //Percentage versus weekly average
                 if (lastWeek.Count != 0)
                 {
-                    double dThisWeek = (double)week.Sum(o => o.Debit);
+                    double dThisWeek = (double)segment.Sum(o => o.Debit);
                     //double dLastWeek = (double)lastWeek.Sum(o => o.Debit);
-                    double dDiff = dThisWeek - averagePerWeek;
-                    double dPercent = (dDiff / averagePerWeek * 100);
+                    double dDiff = dThisWeek - averagePerSegment;
+                    double dPercent = (dDiff / averagePerSegment * 100);
                     int iPercent = (int)Math.Round(dPercent);
                     string sPercent = iPercent.ToString();
 
@@ -301,8 +380,17 @@ namespace Finances
                         moreOrLess = "\u2191";
                         incOrDec = "increase";
                     }
-
-                    report += ($" {moreOrLess} {sPercent}%. Weekly average: {(int)Math.Round(averagePerWeek)}RON.{Environment.NewLine}");
+                    switch (reportType)
+                    {
+                        case ReportType.Weekly:
+                            report += ($" {moreOrLess} {sPercent}%. Weekly average: {(int)Math.Round(averagePerSegment)}RON.{Environment.NewLine}");
+                            break;
+                        case ReportType.Monthly:
+                            report += ($" {moreOrLess} {sPercent}%. Monthly average: {(int)Math.Round(averagePerSegment)}RON.{Environment.NewLine}");
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
                 //string averagePerDay = (week.Sum(o => o.Debit) / 7).ToString();
@@ -372,7 +460,7 @@ namespace Finances
                 //report += Environment.NewLine;
 
                 report += "Most spent on: " + Environment.NewLine;
-                foreach (var ordonator in findSpendingsByUniqueDestination(week))
+                foreach (var ordonator in findSpendingsByUniqueDestination(segment))
                 {
                     //if (lastWeek.Count != 0)
                     //{
@@ -402,7 +490,7 @@ namespace Finances
                 report += Environment.NewLine;
 
                 lastWeek.Clear();
-                lastWeek = week;
+                lastWeek = segment;
             }
 
             return report;
